@@ -53,6 +53,16 @@ y = yearly["연평균기온"].to_numpy(dtype=float)
 slope, intercept = np.polyfit(x, y, 1)
 r = float(np.corrcoef(x, y)[0, 1])
 
+# 최근 20년(끝 연도 포함 20년 구간)만으로 구한 직선
+RECENT_YEARS = 20
+recent = yearly[yearly["연도"] > int(yearly["연도"].max()) - RECENT_YEARS]
+has_recent = len(recent) >= 3
+if has_recent:
+    xr = recent["연도"].to_numpy(dtype=float)
+    yr = recent["연평균기온"].to_numpy(dtype=float)
+    slope_recent, intercept_recent = np.polyfit(xr, yr, 1)
+    r_recent = float(np.corrcoef(xr, yr)[0, 1])
+
 n_years = len(yearly)
 start_year = int(yearly["연도"].min())
 end_year = int(yearly["연도"].max())
@@ -103,24 +113,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-span_years = end_year - start_year + 1
-recent_n = st.slider(
-    "최근 몇 년으로 기울기를 구할까요?",
-    min_value=5,
-    max_value=max(span_years, 6),
-    value=min(20, max(span_years, 6)),
-    step=1,
-    help="끝 연도를 포함해서 이 햇수만큼의 기간(달력 기준)으로 직선을 새로 구해요.",
-)
-recent = yearly[yearly["연도"] > end_year - recent_n]
-has_recent = len(recent) >= 3
-if has_recent:
-    xr = recent["연도"].to_numpy(dtype=float)
-    yr = recent["연평균기온"].to_numpy(dtype=float)
-    slope_recent, intercept_recent = np.polyfit(xr, yr, 1)
-    r_recent = float(np.corrcoef(xr, yr)[0, 1])
-
-st.subheader(f"기울기 비교: 전체 기간 vs 최근 {recent_n}년")
+st.subheader("기울기 비교: 전체 기간 vs 최근 20년")
 col_all, col_recent = st.columns(2)
 with col_all:
     st.markdown("#### 전체 기간")
@@ -131,7 +124,7 @@ with col_all:
     )
     st.write(f"기울기 {slope:.4f} ℃/년 · 상관계수 r = {r:.3f}")
 with col_recent:
-    st.markdown(f"#### 최근 {recent_n}년")
+    st.markdown("#### 최근 20년")
     if has_recent:
         st.caption(
             f"{int(recent['연도'].min())}~{int(recent['연도'].max())}년, {len(recent)}개 해"
@@ -142,11 +135,11 @@ with col_recent:
         )
         st.write(f"기울기 {slope_recent:.4f} ℃/년 · 상관계수 r = {r_recent:.3f}")
     else:
-        st.write(f"최근 {recent_n}년 구간에 쓸 수 있는 해가 3개 미만이라 계산하지 않았어요.")
+        st.write("최근 20년 구간에 쓸 수 있는 해가 3개 미만이라 계산하지 않았어요.")
 
 if has_recent:
     ratio_text = (
-        f"최근 {recent_n}년의 상승 속도는 전체 기간의 약 {slope_recent / slope:.1f}배예요."
+        f"최근 20년의 상승 속도는 전체 기간의 약 {slope_recent / slope:.1f}배예요."
         if slope > 0 and slope_recent > 0
         else "두 기간의 기울기 방향이 달라요."
         if slope * slope_recent < 0
@@ -154,8 +147,8 @@ if has_recent:
     )
     st.info(
         f"100년 기준으로 환산하면 전체 기간은 {slope * 100:+.2f} ℃, "
-        f"최근 {recent_n}년은 {slope_recent * 100:+.2f} ℃예요. {ratio_text} "
-        "다만 기간이 짧을수록(점이 적을수록) 기울기가 크게 흔들릴 수 있어요."
+        f"최근 20년은 {slope_recent * 100:+.2f} ℃예요. {ratio_text} "
+        "다만 최근 20년은 점이 20개 안팎이라 기울기가 크게 흔들릴 수 있어요."
     )
 
 # ---- 그래프 ----
@@ -190,7 +183,7 @@ if has_recent:
             x=rx,
             y=slope_recent * rx + intercept_recent,
             mode="lines",
-            name=f"최근 {recent_n}년 직선",
+            name="최근 20년 직선",
             line=dict(width=3, color="royalblue", dash="dash"),
         )
     )
